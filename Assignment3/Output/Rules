@@ -1,0 +1,91 @@
+Summary:
+Total rows in the original set: 14 
+Total rules discovered: 21 
+The selected measures: Support=0.25 Confidence=0.50 
+-------------------------------------------------------------------
+
+Rules:
+
+Rule#1: (Support=0.29, Confidence=1.00) 
+{ outlook=overcast }
+----> { PlayTennis=P } 
+
+Rule#2: (Support=0.29, Confidence=0.67) 
+{ temperature=mild }
+----> { Humidity=high } 
+
+Rule#3: (Support=0.29, Confidence=0.57) 
+{ Humidity=high }
+----> { temperature=mild } 
+
+Rule#4: (Support=0.29, Confidence=0.67) 
+{ temperature=mild }
+----> { PlayTennis=P } 
+
+Rule#5: (Support=0.29, Confidence=1.00) 
+{ temperature=cool }
+----> { Humidity=normal } 
+
+Rule#6: (Support=0.29, Confidence=0.57) 
+{ Humidity=normal }
+----> { temperature=cool } 
+
+Rule#7: (Support=0.29, Confidence=0.57) 
+{ Humidity=high }
+----> { Windy=false } 
+
+Rule#8: (Support=0.29, Confidence=0.50) 
+{ Windy=false }
+----> { Humidity=high } 
+
+Rule#9: (Support=0.29, Confidence=0.57) 
+{ Humidity=high }
+----> { PlayTennis=N } 
+
+Rule#10: (Support=0.29, Confidence=0.80) 
+{ PlayTennis=N }
+----> { Humidity=high } 
+
+Rule#11: (Support=0.29, Confidence=0.57) 
+{ Humidity=normal }
+----> { Windy=false } 
+
+Rule#12: (Support=0.29, Confidence=0.50) 
+{ Windy=false }
+----> { Humidity=normal } 
+
+Rule#13: (Support=0.43, Confidence=0.86) 
+{ Humidity=normal }
+----> { PlayTennis=P } 
+
+Rule#14: (Support=0.43, Confidence=0.67) 
+{ PlayTennis=P }
+----> { Humidity=normal } 
+
+Rule#15: (Support=0.43, Confidence=0.75) 
+{ Windy=false }
+----> { PlayTennis=P } 
+
+Rule#16: (Support=0.43, Confidence=0.67) 
+{ PlayTennis=P }
+----> { Windy=false } 
+
+Rule#17: (Support=0.29, Confidence=0.57) 
+{ Humidity=normal }
+----> { Windy=false  PlayTennis=P } 
+
+Rule#18: (Support=0.29, Confidence=0.50) 
+{ Windy=false }
+----> { Humidity=normal  PlayTennis=P } 
+
+Rule#19: (Support=0.29, Confidence=1.00) 
+{ Humidity=normal  Windy=false }
+----> { PlayTennis=P } 
+
+Rule#20: (Support=0.29, Confidence=0.67) 
+{ Humidity=normal  PlayTennis=P }
+----> { Windy=false } 
+
+Rule#21: (Support=0.29, Confidence=0.67) 
+{ Windy=false  PlayTennis=P }
+----> { Humidity=normal } 

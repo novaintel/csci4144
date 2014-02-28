@@ -1,0 +1,65 @@
+An Example of README file
+-------------------------
+
+- What is this progrm for?
+ 
+   This progrm is an implementatin of the association rule mining
+   algorithm Apriori in C. 
+   
+- Overview the program code:
+
+   There are totally 10 small C source code files, containing 17 
+   functions including main():
+
+           Apriori.h            define type of data structure
+           apriori.c            main()
+           loadDB.c             loadDB(),fileexists(),attributionexists()  
+           SelectMeasure.c      selectMeasure() 
+           buildFirstItemset.c  buildFirstItemset()
+           pruneItemset.c       pruneItemset() countItemset()
+           generateCandidate.c  generateCandidate() oneDifferentItem()
+                                generateSubset() findSubset() 
+           generateRule.c       generateRule() generateCandidateRule() 
+                                caculateConfidenceRate() 
+           exporResult.c        exporResult() 
+           freeNode.c           freeNode()
+
+   apriori.c - the main  part of this program. 
+   loadDB.c - read data
+   selectMeasure.c - input min_spport and min_confidence.
+   buildFirstItemset.c - generate the first item.
+   pruneItemset.c - delete the items that don't meet the measure.
+   generateCandidate.c - generate subset.
+   generateRule.c - generate rules.
+   exporResult.c - write the result to the output file.
+   freeNode.c - to free the space.  
+ 
+- The following is the  program structure:
+
+   main()---->loadDB 
+                 ---->fileexists
+                 ---->attributionexists
+
+         ---->selectMeasure
+         ---->buildFirstItemset
+         ---->pruneItemset
+                 ---->countItemset    
+
+         ---->generateCandidate
+                 ---->oneDifferentItem
+		 ---->generateSubset
+		 ---->findSubset    
+
+         ---->generateRule   
+                 ---->generateCandidateRule
+		 ---->caculateConfidenceRate
+
+         ---->exporResult
+                 ---->freeNode  
+
+Run the program:
+   bluenose: make
+   bluenose: Apriori      
+
+The result is stored in the file Rules, to view the result:                         
+   bluenose: more Rules                      
