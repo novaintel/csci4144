@@ -1,0 +1,6 @@
+Span		Shape		Slab
+//**************************************
+long		square		waffle
+long		rectangle	waffle
+short		square		two-way
+short		rectangle	one-way
