@@ -14,6 +14,7 @@ public class Id3Impl {
 	
 	//The type of data that we are dealing with 
 	ArrayList<String> attributes;	
+	//Holds the values of each entry based on the picked target attribute for each node. Entries are added in getValue()
 	ArrayList<ArrayList<String>> domains;
 
 	//The root of the ID3 tree that we will be creating
@@ -26,7 +27,7 @@ public class Id3Impl {
 		//This is if hit a case where the string was not found. Most likely our 
 		//mistake and we will add it to the tree
 		if (index < 0) {
-			//Add input
+			//We haven't added 
 			domains.get(attribute).add(input);
 			//Since we just added it we know its at the end of the tree
 			return domains.get(attribute).size() -1;
@@ -45,7 +46,7 @@ public class Id3Impl {
 		//Going to loop through data and get the values for the target attribute
 		for (Id3Entry point: data) {
 			//Get the value from the current point
-			output = domains.get(attribute).get(point.attributes.get(attribute) );
+			output = domains.get(attribute).get(point.dataValues.get(attribute) );
 			//Make sure that we do not already have the value
 			if (values.indexOf(output) < 0) {
 				//Because we do not have the output value already add it to the list
@@ -71,7 +72,7 @@ public class Id3Impl {
 		//Loop through all the data points of the node
 		for (Id3Entry point: data) {
 			//Found a point that has a value that we want
-			if (point.attributes.get(attribute) == value) 
+			if (point.dataValues.get(attribute) == value) 
 				subset.add(point);
 		}
 		return subset;
@@ -94,7 +95,7 @@ public class Id3Impl {
 			//Each point of of the node
 			for (Id3Entry point: data) {
 				//Point has the attribute
-				if (point.attributes.get(numAttributes-1) == i) 
+				if (point.dataValues.get(numAttributes-1) == i) 
 					count++;
 			}
 			
@@ -111,11 +112,18 @@ public class Id3Impl {
 	}
 
 
+	//Just a small check to make sure that this node was not already decomposed saves 
+	//time then redoing it
 	public boolean isDecompose(Id3Node node, int attribute) {
+		//Hit a leaf node
 		if (node.children != null) {
+			//If the attribute that was used to decompose the node is the same 
+			//as the provided attribute then we have decomposed this node
 			if (node.decompositionAttribute == attribute )
 				return true;
 		}
+		
+		//Just to make sure then when we are going back up the parent is not null.
 		if (node.parent == null) 
 			return false;
 
@@ -123,37 +131,51 @@ public class Id3Impl {
 	}
 
 
+	//The main algo for the ID3 impl
 	public void decompose(Id3Node node) {
 		
+		//We have pick this node to be a rule
 		boolean picked=false;
+		//the entropy of a node
 		double entropy=0;
+		//the current attribute that we are looking at
 		int attribute=0;
 		
 
+		//The current node of the tree that we are working with, we calculate its
+		//entropy
 		node.entropy = calEntropy(node.data);
 
+		//If its 0 then we do not have to go any further
 		if (node.entropy == 0) 
 			return;
 
+		
 		for (int i=0; i< numAttributes-1; i++) {
-			int numvalues = domains.get(i).size();
+			//Allready checked this node
 			if (isDecompose(node, i)) 
 				continue;
 			double aventropy = 0;
-			for (int j=0; j< numvalues; j++) {
+			for (int j=0; j< domains.get(i).size(); j++) {
 				ArrayList<Id3Entry> subset = getSubset(node.data, i, j);
+				//There is nothing bellow this node so we work our way to the next
 				if (subset.size() == 0) 
 					continue;
+				//get the entropy for the subset
 				double subsetEntropy = calEntropy(subset);
+				//check for the average for each node in the subset
 				aventropy += subsetEntropy * subset.size();  
 			}
 
+			//Now check what the average entropy for each of the data entries in the current node
 			aventropy = aventropy / node.data.size();
+			//Set that we have pick this node to create rule
 			if (!picked) {
 				picked = true;
 				entropy = aventropy;
 				attribute = i;
 			} else {
+				//We found a better attribute to create a rule for this node
 				if (aventropy < entropy) {
 					picked = true;
 					entropy = aventropy;
@@ -163,21 +185,24 @@ public class Id3Impl {
 
 		}
 
+		//If we got to this point then its most likely that we check this node or its a leaf node
 		if (!picked) 
 			return;
 
-		int numvalues = domains.get(attribute).size();
+		//We found an attribute for the node so lets create the node and populate it.
 		node.decompositionAttribute = attribute;
-		node.children = new Id3Node [numvalues];
-		for (int j=0; j< numvalues; j++) {
+		//Set it up so that we can add children
+		node.children = new Id3Node [domains.get(attribute).size()];
+		//Populate the node
+		for (int j=0; j< domains.get(attribute).size(); j++) {
 			node.children[j] = new Id3Node();
 			node.children[j].parent = node;
 			node.children[j].data = getSubset(node.data, attribute, j);
 			node.children[j].decompositionValue = j;
 		}
 
-
-		for (int j=0; j< numvalues; j++) {
+		//Now work on the children that we have just created 
+		for (int j=0; j< domains.get(attribute).size(); j++) {
 			decompose(node.children[j]);
 		}
 
@@ -206,11 +231,12 @@ public class Id3Impl {
 			return false;
 		}
 
+		//We will get ready to add the unsorted data
 		domains = new ArrayList<ArrayList<String>>(numAttributes);
 		for (int i=0; i < numAttributes; i++) 
 			domains.add(i, new ArrayList<String>());
 		
-		
+		//Get the first line from the file as these are the attributes for all entries
 		attributes = new ArrayList<String>(numAttributes);
 		for (int i=0; i < numAttributes; i++) {
 			attributes.add(i,tokenizer.nextToken());
@@ -229,11 +255,14 @@ public class Id3Impl {
 				return false;
 			}
 
-			Id3Entry point = new Id3Entry(numAttributes);
+			//We create a new entery for the new line
+			Id3Entry entry = new Id3Entry(numAttributes);
 			for (int i=0; i < numAttributes; i++) {
-				point.attributes.add(i, getValue(i, tokenizer.nextToken() ));
+				//add all the values from the current line
+				entry.dataValues.add(i, getValue(i, tokenizer.nextToken() ));
 			}
-			root.data.add(point);
+			//As the root node covers all cases we add the entry to the root node.
+			root.data.add(entry);
 
 			input = bin.readLine();
 
@@ -246,17 +275,22 @@ public class Id3Impl {
 	}	
 
 	public void printTree(Id3Node node, String tab, boolean newLine) {
+		//Hit a leaf node as such we can print the "then" attribute
 		if (node.children == null) {
+			//Want to get the values of the node
 			ArrayList<Integer> values = getValues(node.data, numAttributes-1 );
+			//Case in which there are only one outcome for the if clause
 			if (values.size() == 1) {
 				System.out.println( attributes.get(numAttributes-1) + " is " + domains.get(numAttributes-1).get(values.get(0)));
 				newLine = false;
 				return;
 			}
+			//There are no values so go back
 			if(values.size() == 0){
 				newLine = false;
 				return;
 			}
+			//Go through and list all the "then" values
 			System.out.print(tab + "\t" + attributes.get(numAttributes-1));
 			for (int i=0; i < values.size(); i++) {
 				System.out.print(domains.get(numAttributes-1).get(values.get(i)));
@@ -264,26 +298,32 @@ public class Id3Impl {
 					System.out.print( " , " );
 				}
 			}
+			//next entry
 			System.out.println();
 			newLine = false;
 			return;
 		}
 
+		//This section covers the If part of the rule
 		int numvalues = node.children.length;
 		for (int i=0; i < numvalues; i++) {
+			//checks to see if there are subsets of the rule
 			if(hasChilderen(i, node)){
 				if(newLine)
 					System.out.println();
+				//Print out the If clause
 				System.out.print(tab + "if " + attributes.get(node.decompositionAttribute) + " is " +
 						domains.get(node.decompositionAttribute).get(i) + ", then " );
 				newLine = true;
 			}
+			//Work on the children
 			printTree(node.children[i], tab + "\t", newLine);
 		}
 
 
 	}
-
+	
+	//Just a hack method for checking if a new line should be done
 	public boolean hasChilderen(int place, Id3Node node){
 		int outputattr = numAttributes-1;
 

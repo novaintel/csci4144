@@ -4,9 +4,9 @@ import java.util.ArrayList;
 
 public class Id3Entry {
 
-		public ArrayList<Integer> attributes;
+		public ArrayList<Integer> dataValues;
 
 		public Id3Entry(int numattributes) {
-			attributes = new ArrayList<Integer>(numattributes);
+			dataValues = new ArrayList<Integer>(numattributes);
 		}
 }
