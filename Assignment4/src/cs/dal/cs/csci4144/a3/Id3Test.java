@@ -20,7 +20,7 @@ public class Id3Test {
 			System.exit(-1);
 		}
 		
-		newId3Instance.decomposeNode(newId3Instance.getRoot());
+		newId3Instance.decompose(newId3Instance.getRoot());
 		newId3Instance.printTree(newId3Instance.getRoot(), "", false);
 
 	}

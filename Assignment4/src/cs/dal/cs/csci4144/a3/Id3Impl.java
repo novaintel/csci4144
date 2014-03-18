@@ -10,7 +10,7 @@ import java.util.StringTokenizer;
 public class Id3Impl {
 
 	int numAttributes;
-	ArrayList<String> attributeNames;	
+	ArrayList<String> attributes;	
 
 	ArrayList<ArrayList<String>> domains;
 
@@ -25,7 +25,7 @@ public class Id3Impl {
 		return index;
 	}
 
-	public ArrayList<Integer> getAllValues(ArrayList<Id3Entry> data, int attribute) {
+	public ArrayList<Integer> getValues(ArrayList<Id3Entry> data, int attribute) {
 		ArrayList<String> values = new ArrayList<String>();
 		int num = data.size();
 		for (int i=0; i< num; i++) {
@@ -61,19 +61,18 @@ public class Id3Impl {
 	}
 
 
-	public double calculateEntropy(ArrayList<Id3Entry> data) {
+	public double calEntropy(ArrayList<Id3Entry> data) {
 		
 		if (data.size() == 0) 
 			return 0;
-
-		int attribute = numAttributes-1;
-		int numvalues = domains.get(attribute).size();
+		
+		int numvalues = domains.get(numAttributes-1).size();
 		double sum = 0;
 		for (int i=0; i< numvalues; i++) {
 			int count=0;
 			for (int j=0; j< data.size(); j++) {
 				Id3Entry point = data.get(j);
-				if (point.attributes.get(attribute) == i) count++;
+				if (point.attributes.get(numAttributes-1) == i) count++;
 			}
 			double probability = 1.*count/data.size();
 			if (count > 0) sum += -probability*Math.log(probability);
@@ -95,13 +94,13 @@ public class Id3Impl {
 	}
 
 
-	public void decomposeNode(Id3Node node) {
+	public void decompose(Id3Node node) {
 
 		double bestEntropy=0;
 		boolean selected=false;
 		int selectedAttribute=0;
 
-		node.entropy = calculateEntropy(node.data);
+		node.entropy = calEntropy(node.data);
 
 		if (node.entropy == 0) 
 			return;
@@ -114,7 +113,7 @@ public class Id3Impl {
 				ArrayList<Id3Entry> subset = getSubset(node.data, i, j);
 				if (subset.size() == 0) 
 					continue;
-				double subentropy = calculateEntropy(subset);
+				double subentropy = calEntropy(subset);
 				averageentropy += subentropy * subset.size();  
 			}
 
@@ -147,7 +146,7 @@ public class Id3Impl {
 
 
 		for (int j=0; j< numvalues; j++) {
-			decomposeNode(node.children[j]);
+			decompose(node.children[j]);
 		}
 
 
@@ -183,9 +182,9 @@ public class Id3Impl {
 			domains.add(i, new ArrayList<String>());
 		
 		
-		attributeNames = new ArrayList<String>(numAttributes);
+		attributes = new ArrayList<String>(numAttributes);
 		for (int i=0; i < numAttributes; i++) {
-			attributeNames.add(i,tokenizer.nextToken());
+			attributes.add(i,tokenizer.nextToken());
 		}
 
 		
@@ -219,9 +218,9 @@ public class Id3Impl {
 
 	public void printTree(Id3Node node, String tab, boolean newLine) {
 		if (node.children == null) {
-			ArrayList<Integer> values = getAllValues(node.data, numAttributes-1 );
+			ArrayList<Integer> values = getValues(node.data, numAttributes-1 );
 			if (values.size() == 1) {
-				System.out.println( attributeNames.get(numAttributes-1) + " is " + domains.get(numAttributes-1).get(values.get(0)));
+				System.out.println( attributes.get(numAttributes-1) + " is " + domains.get(numAttributes-1).get(values.get(0)));
 				newLine = false;
 				return;
 			}
@@ -229,7 +228,7 @@ public class Id3Impl {
 				newLine = false;
 				return;
 			}
-			System.out.print(tab + "\t" + attributeNames.get(numAttributes-1));
+			System.out.print(tab + "\t" + attributes.get(numAttributes-1));
 			for (int i=0; i < values.size(); i++) {
 				System.out.print(domains.get(numAttributes-1).get(values.get(i)));
 				if ( i != values.size()-1 ){
@@ -246,7 +245,7 @@ public class Id3Impl {
 			if(hasChilderen(i, node)){
 				if(newLine)
 					System.out.println();
-				System.out.print(tab + "if " + attributeNames.get(node.decompositionAttribute) + " is " +
+				System.out.print(tab + "if " + attributes.get(node.decompositionAttribute) + " is " +
 						domains.get(node.decompositionAttribute).get(i) + ", then " );
 				newLine = true;
 			}
@@ -260,7 +259,7 @@ public class Id3Impl {
 		int outputattr = numAttributes-1;
 
 		if(node.children[place].data != null){
-			ArrayList<Integer> childrenValues = getAllValues(node.children[place].data, outputattr);
+			ArrayList<Integer> childrenValues = getValues(node.children[place].data, outputattr);
 			if(childrenValues.size() == 0)
 				return false;
 		}
