@@ -1,46 +1,21 @@
 package cs.dal.cs.csci4144.a3;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 public class Id3Impl {
 
 	int numAttributes;
 	ArrayList<String> attributeNames;	
-	
+
 	ArrayList<ArrayList<String>> domains;
 
-	
-	class DataPoint {
+	Id3Node root = new Id3Node();
 
-		public ArrayList<Integer> attributes;
-
-		public DataPoint(int numattributes) {
-			attributes = new ArrayList<Integer>(numattributes);
-		}
-	};
-
-	class TreeNode {
-		public double entropy;			
-		public ArrayList data;			
-		public int decompositionAttribute;	
-		public int decompositionValue;		
-		public TreeNode []children;		
-		public TreeNode parent;			
-		
-		public TreeNode() {
-			data = new ArrayList();
-		}
-
-	};
-
-	/*  The root of the decomposition tree  */
-	TreeNode root = new TreeNode();
-
-
-	/*  This function returns an integer corresponding to the symbolic value of the attribute.
-		If the symbol does not exist in the domain, the symbol is added to the domain of the attribute
-	*/
 	public int getSymbolValue(int attribute, String symbol) {
 		int index = domains.get(attribute).indexOf(symbol);
 		if (index < 0) {
@@ -50,306 +25,250 @@ public class Id3Impl {
 		return index;
 	}
 
-	/*  Returns all the values of the specified attribute in the data set  */
-	public int []getAllValues(ArrayList data, int attribute) {
-		ArrayList values = new ArrayList();
+	public ArrayList<Integer> getAllValues(ArrayList<Id3Entry> data, int attribute) {
+		ArrayList<String> values = new ArrayList<String>();
 		int num = data.size();
 		for (int i=0; i< num; i++) {
-			DataPoint point = (DataPoint)data.get(i);
-			String symbol = (String)domains.get(attribute).get(point.attributes.get(attribute) );
+			Id3Entry point = data.get(i);
+			String symbol = domains.get(attribute).get(point.attributes.get(attribute) );
 			int index = values.indexOf(symbol);
 			if (index < 0) {
 				values.add(symbol);
 			}
 		}
 
-		int []array = new int[values.size()];
-		for (int i=0; i< array.length; i++) {
-			String symbol = (String)values.get(i);
-			array[i] = domains.get(attribute).indexOf(symbol);
+		ArrayList<Integer> result = new ArrayList<Integer>();
+		for (int i=0; i< values.size(); i++) {
+			String symbol = values.get(i);
+			result.add(i,domains.get(attribute).indexOf(symbol));
 		}
-		values = null;
-		return array;
+		return result;
 	}
 
 
-	/*  Returns a subset of data, in which the value of the specfied attribute of all data points is the specified value  */
-	public ArrayList getSubset(ArrayList data, int attribute, int value) {
-		ArrayList subset = new ArrayList();
+	public ArrayList<Id3Entry> getSubset(ArrayList<Id3Entry> data, int attribute, int value) {
+		
+		ArrayList<Id3Entry> subset = new ArrayList<Id3Entry>();
 
 		int num = data.size();
 		for (int i=0; i< num; i++) {
-			DataPoint point = (DataPoint)data.get(i);
-			if (point.attributes.get(attribute) == value) subset.add(point);
+			Id3Entry point = data.get(i);
+			if (point.attributes.get(attribute) == value) 
+				subset.add(point);
 		}
 		return subset;
 
 	}
 
 
-	/*  Calculates the entropy of the set of data points.
-		The entropy is calculated using the values of the output attribute which is the last element in the array attribtues
-	*/
-	public double calculateEntropy(ArrayList data) {
-
-		int numdata = data.size();
-		if (numdata == 0) return 0;
+	public double calculateEntropy(ArrayList<Id3Entry> data) {
+		
+		if (data.size() == 0) 
+			return 0;
 
 		int attribute = numAttributes-1;
 		int numvalues = domains.get(attribute).size();
 		double sum = 0;
 		for (int i=0; i< numvalues; i++) {
 			int count=0;
-			for (int j=0; j< numdata; j++) {
-				DataPoint point = (DataPoint)data.get(j);
+			for (int j=0; j< data.size(); j++) {
+				Id3Entry point = data.get(j);
 				if (point.attributes.get(attribute) == i) count++;
 			}
-			double probability = 1.*count/numdata;
+			double probability = 1.*count/data.size();
 			if (count > 0) sum += -probability*Math.log(probability);
 		}
 		return sum;
 
 	}
 
-	/*  This function checks if the specified attribute is used to decompose the data set
-		in any of the parents of the specfied node in the decomposition tree.
-		Recursively checks the specified node as well as all parents
-	*/
-	public boolean alreadyUsedToDecompose(TreeNode node, int attribute) {
+
+	public boolean isDecompose(Id3Node node, int attribute) {
 		if (node.children != null) {
 			if (node.decompositionAttribute == attribute )
 				return true;
 		}
-		if (node.parent == null) return false;
-		return alreadyUsedToDecompose(node.parent, attribute);
+		if (node.parent == null) 
+			return false;
+
+		return isDecompose(node.parent, attribute);
 	}
 
-	/*  This function decomposes the specified node according to the ID3 algorithm.
-		Recursively divides all children nodes until it is not possible to divide any further
-                I have changed this code from my earlier version. I believe that the code
-                in my earlier version prevents useless decomposition and results in a better decision tree!
-                This is a more faithful implementation of the standard ID3 algorithm
-	*/
-	public void decomposeNode(TreeNode node) {
+
+	public void decomposeNode(Id3Node node) {
 
 		double bestEntropy=0;
 		boolean selected=false;
 		int selectedAttribute=0;
 
-		int numdata = node.data.size();
-		int numinputattributes = numAttributes-1;
-                node.entropy = calculateEntropy(node.data);
-		if (node.entropy == 0) return;
+		node.entropy = calculateEntropy(node.data);
 
-		/*  In the following two loops, the best attribute is located which
-			causes maximum decrease in entropy
-		*/
-		for (int i=0; i< numinputattributes; i++) {
+		if (node.entropy == 0) 
+			return;
+
+		for (int i=0; i< numAttributes-1; i++) {
 			int numvalues = domains.get(i).size();
-                        if ( alreadyUsedToDecompose(node, i) ) continue;
-                        // Use the following variable to store the entropy for the test node created with the attribute i
-                        double averageentropy = 0;
+			if ( isDecompose(node, i) ) continue;
+			double averageentropy = 0;
 			for (int j=0; j< numvalues; j++) {
-				ArrayList subset = getSubset(node.data, i, j);
-				if (subset.size() == 0) continue;
+				ArrayList<Id3Entry> subset = getSubset(node.data, i, j);
+				if (subset.size() == 0) 
+					continue;
 				double subentropy = calculateEntropy(subset);
-                                averageentropy += subentropy * subset.size();  // Weighted sum
+				averageentropy += subentropy * subset.size();  
 			}
 
-                        averageentropy = averageentropy / numdata;   // Taking the weighted average
-                        if (selected == false) {
-                          selected = true;
-                          bestEntropy = averageentropy;
-                          selectedAttribute = i;
-                        } else {
-                          if (averageentropy < bestEntropy) {
-                            selected = true;
-                            bestEntropy = averageentropy;
-                            selectedAttribute = i;
-                          }
-                        }
+			averageentropy = averageentropy / node.data.size();
+			if (selected == false) {
+				selected = true;
+				bestEntropy = averageentropy;
+				selectedAttribute = i;
+			} else {
+				if (averageentropy < bestEntropy) {
+					selected = true;
+					bestEntropy = averageentropy;
+					selectedAttribute = i;
+				}
+			}
 
 		}
 
 		if (selected == false) return;
 
-		// Now divide the dataset using the selected attribute
-                int numvalues = domains.get(selectedAttribute).size();
+		int numvalues = domains.get(selectedAttribute).size();
 		node.decompositionAttribute = selectedAttribute;
-		node.children = new TreeNode [numvalues];
-                for (int j=0; j< numvalues; j++) {
-                  node.children[j] = new TreeNode();
-                  node.children[j].parent = node;
-                  node.children[j].data = getSubset(node.data, selectedAttribute, j);
-                  node.children[j].decompositionValue = j;
-                }
+		node.children = new Id3Node [numvalues];
+		for (int j=0; j< numvalues; j++) {
+			node.children[j] = new Id3Node();
+			node.children[j].parent = node;
+			node.children[j].data = getSubset(node.data, selectedAttribute, j);
+			node.children[j].decompositionValue = j;
+		}
 
-		// Recursively divides children nodes
-                for (int j=0; j< numvalues; j++) {
-                  decomposeNode(node.children[j]);
-                }
 
-		// There is no more any need to keep the original vector.  Release this memory
-		node.data = null;		// Let the garbage collector recover this memory
+		for (int j=0; j< numvalues; j++) {
+			decomposeNode(node.children[j]);
+		}
+
+
+		node.data = null;
 
 	}
 
 
-   	/** Function to read the data file.
-		The first line of the data file should contain the names of all attributes.
-		The number of attributes is inferred from the number of words in this line.
-		The last word is taken as the name of the output attribute.
-		Each subsequent line contains the values of attributes for a data point.
-		If any line starts with // it is taken as a comment and ignored.
-		Blank lines are also ignored.
-   	*/
-   	public int readData(String filename)  throws Exception {
+	public boolean readData(String filename)  throws Exception {
 
-      		FileInputStream in = null;
+		FileInputStream in = null;
 
-      		try {
-         		File inputFile = new File(filename);
-	 		in = new FileInputStream(inputFile);
-      		} catch ( Exception e) {
-			System.err.println( "Unable to open data file: " + filename + "\n" + e);
-			return 0;
-      		}
-
-      		BufferedReader bin = new BufferedReader(new InputStreamReader(in) );
-
-		String input;
-      		while(true) {
-        		input = bin.readLine();
-			if (input == null) {
-				System.err.println( "No data found in the data file: " + filename + "\n");
-				return 0;
-			}
-			if (input.startsWith("//")) continue;
-			if (input.equals("")) continue;
-			break;
+		try {
+			File inputFile = new File(filename);
+			in = new FileInputStream(inputFile);
+		} catch ( Exception e) {
+			return false;
 		}
 
+		BufferedReader bin = new BufferedReader(new InputStreamReader(in));
 
-     		StringTokenizer tokenizer = new StringTokenizer(input);
+		String input= bin.readLine();
+
+		StringTokenizer tokenizer = new StringTokenizer(input);
 		numAttributes = tokenizer.countTokens();
 		if (numAttributes <= 1) {
-			System.err.println( "Read line: " + input);
-			System.err.println( "Could not obtain the names of attributes in the line");
-			System.err.println( "Expecting at least one input attribute and one output attribute");
-			return 0;
+			bin.close();
+			return false;
 		}
 
 		domains = new ArrayList<ArrayList<String>>(numAttributes);
-		for (int i=0; i < numAttributes; i++) domains.add(i, new ArrayList<String>());
+		for (int i=0; i < numAttributes; i++) 
+			domains.add(i, new ArrayList<String>());
+		
+		
 		attributeNames = new ArrayList<String>(numAttributes);
+		for (int i=0; i < numAttributes; i++) {
+			attributeNames.add(i,tokenizer.nextToken());
+		}
 
-     		for (int i=0; i < numAttributes; i++) {
-         		attributeNames.add(i,tokenizer.nextToken());
-     		}
+		
+		input = bin.readLine();
 
+		while(input != null) {
 
-      		while(true) {
-        		input = bin.readLine();
-			if (input == null) break;
-			if (input.startsWith("//")) continue;
-			if (input.equals("")) continue;
 
 			tokenizer = new StringTokenizer(input);
 			int numtokens = tokenizer.countTokens();
 			if (numtokens != numAttributes) {
-				System.err.println( "Read " + root.data.size() + " data");
-				System.err.println( "Last line read: " + input);
-				System.err.println( "Expecting " + numAttributes  + " attributes");
-				return 0;
+				bin.close();
+				return false;
 			}
 
-			DataPoint point = new DataPoint(numAttributes);
-     			for (int i=0; i < numAttributes; i++) {
-         			point.attributes.add(i, getSymbolValue(i, tokenizer.nextToken() ));
-     			}
+			Id3Entry point = new Id3Entry(numAttributes);
+			for (int i=0; i < numAttributes; i++) {
+				point.attributes.add(i, getSymbolValue(i, tokenizer.nextToken() ));
+			}
 			root.data.add(point);
+
+			input = bin.readLine();
 
 		}
 
 		bin.close();
 
-      		return 1;
+		return true;
 
-   	}	// End of function readData
-   	//-----------------------------------------------------------------------
+	}	
 
-	/*  This function prints the decision tree in the form of rules.
-		The action part of the rule is of the form
-			outputAttribute = "symbolicValue"
-		or
-			outputAttribute = { "Value1", "Value2", ..  }
-		The second form is printed if the node cannot be decomposed any further into an homogenous set
-	*/
-	public void printTree(TreeNode node, String tab) {
-
-		int outputattr = numAttributes-1;
-
+	public void printTree(Id3Node node, String tab, boolean newLine) {
 		if (node.children == null) {
-			int []values = getAllValues(node.data, outputattr );
-			if (values.length == 1) {
-				System.out.println(tab + "\t" + attributeNames.get(outputattr) + " = \"" + domains.get(outputattr).get(values[0]) + "\";");
+			ArrayList<Integer> values = getAllValues(node.data, numAttributes-1 );
+			if (values.size() == 1) {
+				System.out.println( attributeNames.get(numAttributes-1) + " is " + domains.get(numAttributes-1).get(values.get(0)));
+				newLine = false;
 				return;
 			}
-			System.out.print(tab + "\t" + attributeNames.get(outputattr) + " = {");
-			for (int i=0; i < values.length; i++) {
-				System.out.print("\"" + domains.get(outputattr).get(values[i]) + "\" ");
-				if ( i != values.length-1 ) System.out.print( " , " );
+			if(values.size() == 0){
+				newLine = false;
+				return;
 			}
-			System.out.println( " };");
+			System.out.print(tab + "\t" + attributeNames.get(numAttributes-1));
+			for (int i=0; i < values.size(); i++) {
+				System.out.print(domains.get(numAttributes-1).get(values.get(i)));
+				if ( i != values.size()-1 ){
+					System.out.print( " , " );
+				}
+			}
+			System.out.println();
+			newLine = false;
 			return;
 		}
 
 		int numvalues = node.children.length;
-                for (int i=0; i < numvalues; i++) {
-                  System.out.println(tab + "if( " + attributeNames.get(node.decompositionAttribute) + " == \"" +
-                          domains.get(node.decompositionAttribute).get(i) + "\") {" );
-                  printTree(node.children[i], tab + "\t");
-                  if (i != numvalues-1) System.out.print(tab +  "} else ");
-                  else System.out.println(tab +  "}");
-                }
-
-
-	}
-
-	/*  This function creates the decision tree and prints it in the form of rules on the console
-	*/
-	public void createDecisionTree() {
-		decomposeNode(root);
-		printTree(root, "");
-	}
-
-
-  	/* Here is the definition of the main function */
-   	public static void main(String[] args) throws Exception {
-
-      		int num = args.length;
-		if (num != 1) {
-      			System.out.println("You need to specify the name of the datafile at the command line " );
-			return;
+		for (int i=0; i < numvalues; i++) {
+			if(hasChilderen(i, node)){
+				if(newLine)
+					System.out.println();
+				System.out.print(tab + "if " + attributeNames.get(node.decompositionAttribute) + " is " +
+						domains.get(node.decompositionAttribute).get(i) + ", then " );
+				newLine = true;
+			}
+			printTree(node.children[i], tab + "\t", newLine);
 		}
 
 
-		Id3Impl me = new Id3Impl();
+	}
 
-		long startTime = System.currentTimeMillis();	//  To print the time taken to process the data
+	public boolean hasChilderen(int place, Id3Node node){
+		int outputattr = numAttributes-1;
 
-		int status = me.readData(args[0]);
-		if (status <= 0) return;
+		if(node.children[place].data != null){
+			ArrayList<Integer> childrenValues = getAllValues(node.children[place].data, outputattr);
+			if(childrenValues.size() == 0)
+				return false;
+		}
+		return true;
+	}
+	
+	public Id3Node getRoot(){
+		return root;
+	}
 
-		me.createDecisionTree();
-
-
-		long endTime = System.currentTimeMillis();
-		long totalTime = (endTime-startTime)/1000;
-
-		System.out.println( totalTime + " Seconds");
-
-
-   	}
-   	/*  End of the main function  */	
 }
