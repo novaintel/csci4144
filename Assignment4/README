@@ -1,0 +1,8 @@
+Run make to compile program
+
+Place database in the same directory as the source/object java files
+
+Then run java Id3Test
+
+Enter the name of the file when asked.
+
