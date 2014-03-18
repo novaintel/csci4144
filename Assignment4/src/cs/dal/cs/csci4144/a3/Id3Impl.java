@@ -95,10 +95,11 @@ public class Id3Impl {
 
 
 	public void decompose(Id3Node node) {
-
-		double bestEntropy=0;
-		boolean selected=false;
-		int selectedAttribute=0;
+		
+		boolean picked=false;
+		double entropy=0;
+		int attribute=0;
+		
 
 		node.entropy = calEntropy(node.data);
 
@@ -108,39 +109,40 @@ public class Id3Impl {
 		for (int i=0; i< numAttributes-1; i++) {
 			int numvalues = domains.get(i).size();
 			if ( isDecompose(node, i) ) continue;
-			double averageentropy = 0;
+			double aventropy = 0;
 			for (int j=0; j< numvalues; j++) {
 				ArrayList<Id3Entry> subset = getSubset(node.data, i, j);
 				if (subset.size() == 0) 
 					continue;
-				double subentropy = calEntropy(subset);
-				averageentropy += subentropy * subset.size();  
+				double subsetEntropy = calEntropy(subset);
+				aventropy += subsetEntropy * subset.size();  
 			}
 
-			averageentropy = averageentropy / node.data.size();
-			if (selected == false) {
-				selected = true;
-				bestEntropy = averageentropy;
-				selectedAttribute = i;
+			aventropy = aventropy / node.data.size();
+			if (!picked) {
+				picked = true;
+				entropy = aventropy;
+				attribute = i;
 			} else {
-				if (averageentropy < bestEntropy) {
-					selected = true;
-					bestEntropy = averageentropy;
-					selectedAttribute = i;
+				if (aventropy < entropy) {
+					picked = true;
+					entropy = aventropy;
+					attribute = i;
 				}
 			}
 
 		}
 
-		if (selected == false) return;
+		if (!picked) 
+			return;
 
-		int numvalues = domains.get(selectedAttribute).size();
-		node.decompositionAttribute = selectedAttribute;
+		int numvalues = domains.get(attribute).size();
+		node.decompositionAttribute = attribute;
 		node.children = new Id3Node [numvalues];
 		for (int j=0; j< numvalues; j++) {
 			node.children[j] = new Id3Node();
 			node.children[j].parent = node;
-			node.children[j].data = getSubset(node.data, selectedAttribute, j);
+			node.children[j].data = getSubset(node.data, attribute, j);
 			node.children[j].decompositionValue = j;
 		}
 
@@ -148,9 +150,6 @@ public class Id3Impl {
 		for (int j=0; j< numvalues; j++) {
 			decompose(node.children[j]);
 		}
-
-
-		node.data = null;
 
 	}
 
