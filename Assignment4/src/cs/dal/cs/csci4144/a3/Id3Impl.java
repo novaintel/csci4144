@@ -9,50 +9,68 @@ import java.util.StringTokenizer;
 
 public class Id3Impl {
 
+	//Keep a count of the num of Attributes for convenience 
 	int numAttributes;
+	
+	//The type of data that we are dealing with 
 	ArrayList<String> attributes;	
-
 	ArrayList<ArrayList<String>> domains;
 
+	//The root of the ID3 tree that we will be creating
 	Id3Node root = new Id3Node();
 
-	public int getSymbolValue(int attribute, String symbol) {
-		int index = domains.get(attribute).indexOf(symbol);
+	//Find the location of string input given the attribute
+	public int getValue(int attribute, String input) {
+		//Get the attribute and Use Array list to look for the input String
+		int index = domains.get(attribute).indexOf(input);
+		//This is if hit a case where the string was not found. Most likely our 
+		//mistake and we will add it to the tree
 		if (index < 0) {
-			domains.get(attribute).add(symbol);
+			//Add input
+			domains.get(attribute).add(input);
+			//Since we just added it we know its at the end of the tree
 			return domains.get(attribute).size() -1;
 		}
 		return index;
 	}
 
+	//Only used to print out the data to the cmd. Gets all values from each node based on the attribute
 	public ArrayList<Integer> getValues(ArrayList<Id3Entry> data, int attribute) {
+		//Just the string to hold output from the queries from the ArrayList
+		String output = "";
+		
+		//Just a temp ArrayList to hold the value as we find them
 		ArrayList<String> values = new ArrayList<String>();
-		int num = data.size();
-		for (int i=0; i< num; i++) {
-			Id3Entry point = data.get(i);
-			String symbol = domains.get(attribute).get(point.attributes.get(attribute) );
-			int index = values.indexOf(symbol);
-			if (index < 0) {
-				values.add(symbol);
+		
+		//Going to loop through data and get the values for the target attribute
+		for (Id3Entry point: data) {
+			//Get the value from the current point
+			output = domains.get(attribute).get(point.attributes.get(attribute) );
+			//Make sure that we do not already have the value
+			if (values.indexOf(output) < 0) {
+				//Because we do not have the output value already add it to the list
+				values.add(output);
 			}
 		}
-
+		//Now that we have a rough list of the values that we want we can officially add
+		//them to the needed places
 		ArrayList<Integer> result = new ArrayList<Integer>();
 		for (int i=0; i< values.size(); i++) {
-			String symbol = values.get(i);
-			result.add(i,domains.get(attribute).indexOf(symbol));
+			output = values.get(i);
+			//Get the location of the String in the domain, easy for accessing later.
+			result.add(i,domains.get(attribute).indexOf(output));
 		}
 		return result;
 	}
 
-
+	//Just get the subset of the provided node given a value
 	public ArrayList<Id3Entry> getSubset(ArrayList<Id3Entry> data, int attribute, int value) {
-		
+		//Holds the subset of the nodes
 		ArrayList<Id3Entry> subset = new ArrayList<Id3Entry>();
-
-		int num = data.size();
-		for (int i=0; i< num; i++) {
-			Id3Entry point = data.get(i);
+		
+		//Loop through all the data points of the node
+		for (Id3Entry point: data) {
+			//Found a point that has a value that we want
 			if (point.attributes.get(attribute) == value) 
 				subset.add(point);
 		}
@@ -60,22 +78,33 @@ public class Id3Impl {
 
 	}
 
-
+	//Calculate the Entropy of a nodes data
 	public double calEntropy(ArrayList<Id3Entry> data) {
 		
+		//Well if there is no data then the Entropy must be zero
 		if (data.size() == 0) 
 			return 0;
 		
-		int numvalues = domains.get(numAttributes-1).size();
+		//The sum will hold the entropy of the data of the node
 		double sum = 0;
-		for (int i=0; i< numvalues; i++) {
+		//We are going to go through all the attributes for each node
+		for (int i=0; i< domains.get(numAttributes-1).size(); i++) {
+			//count to see if a node has a value for said attribute
 			int count=0;
-			for (int j=0; j< data.size(); j++) {
-				Id3Entry point = data.get(j);
-				if (point.attributes.get(numAttributes-1) == i) count++;
+			//Each point of of the node
+			for (Id3Entry point: data) {
+				//Point has the attribute
+				if (point.attributes.get(numAttributes-1) == i) 
+					count++;
 			}
-			double probability = 1.*count/data.size();
-			if (count > 0) sum += -probability*Math.log(probability);
+			
+			//If the count is greater then 0 then the prob may be higher then 0
+			if (count > 0){
+				//find the prob
+				double probability = 1.*count/data.size();
+				//The sum as defined by the ID3 algorithm
+				sum += -probability*Math.log(probability);
+			}
 		}
 		return sum;
 
@@ -108,7 +137,8 @@ public class Id3Impl {
 
 		for (int i=0; i< numAttributes-1; i++) {
 			int numvalues = domains.get(i).size();
-			if ( isDecompose(node, i) ) continue;
+			if (isDecompose(node, i)) 
+				continue;
 			double aventropy = 0;
 			for (int j=0; j< numvalues; j++) {
 				ArrayList<Id3Entry> subset = getSubset(node.data, i, j);
@@ -201,7 +231,7 @@ public class Id3Impl {
 
 			Id3Entry point = new Id3Entry(numAttributes);
 			for (int i=0; i < numAttributes; i++) {
-				point.attributes.add(i, getSymbolValue(i, tokenizer.nextToken() ));
+				point.attributes.add(i, getValue(i, tokenizer.nextToken() ));
 			}
 			root.data.add(point);
 
